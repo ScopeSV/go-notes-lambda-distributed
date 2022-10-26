@@ -1,0 +1,79 @@
+service: notes
+
+package:
+  individually: true
+
+provider:
+  name: aws
+  lambdaHashingVersion: 20201221
+  region: eu-west-1
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:*
+      Resource:
+        - "Fn::Join":
+            - ""
+            - - "Fn::GetAtt": [ DynamoDB, Arn ]
+              - "*"
+
+  environment:
+    TABLE_NAME: ${self:custom.tableName}
+
+custom:
+  tableName: notes-go
+
+functions:
+  findAll:
+    runtime: go1.x
+    handler: findAll
+    events:
+      - http:
+          path: notes
+          method: GET
+    package:
+      artifact: bin/findAll.zip
+  post:
+    runtime: go1.x
+    handler: post
+    events:
+      - http:
+          path: notes
+          method: POST
+    package:
+      artifact: bin/post.zip
+  findOne:
+    runtime: go1.x
+    handler: findOne
+    events:
+      - http:
+          path: notes/{id}
+          method: GET
+    package:
+      artifact: bin/findOne.zip
+  deleteOne:
+    runtime: go1.x
+    handler: deleteOne
+    events:
+      - http:
+          path: notes/{id}
+          method: DELETE
+    package:
+      artifact: bin/deleteOne.zip
+
+resources:
+  Resources:
+    DynamoDB:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
